@@ -88,6 +88,21 @@ const dynasties = computed(() => ['全部', ...new Set(poems.value.map(p => p.dy
 const themes = computed(() => ['全部', ...new Set(poems.value.map(p => p.theme))])
 const authors = computed(() => ['全部', ...new Set(poems.value.map(p => p.author))])
 
+const poets = ref([
+  { id: 1, name: '李白', photo: new URL('../assets/photo1.png', import.meta.url).href },
+  { id: 2, name: '杜甫', photo: null },
+  { id: 3, name: '王维', photo: null },
+  { id: 4, name: '白居易', photo: null },
+  { id: 5, name: '苏轼', photo: null },
+  { id: 6, name: '辛弃疾', photo: null },
+  { id: 7, name: '李清照', photo: null },
+  { id: 8, name: '陶渊明', photo: new URL('../assets/photo2.png', import.meta.url).href },
+  { id: 9, name: '王安石', photo: null },
+  { id: 10, name: '孟浩然', photo: null },
+  { id: 11, name: '柳宗元', photo: null },
+  { id: 12, name: '韩愈', photo: null }
+])
+
 const filteredPoems = computed(() => {
   const q = query.value.trim()
   return poems.value.filter(p => {
@@ -121,6 +136,11 @@ function searchPoems() {
   // 搜索功能已经通过v-model自动实现，这里可以添加搜索动画或其他逻辑
   console.log('搜索关键词:', query.value)
 }
+
+function refreshPoems() {
+  // 随机打乱诗词顺序实现换一批功能
+  poems.value = [...poems.value].sort(() => Math.random() - 0.5)
+}
 </script>
 
 <template>
@@ -143,11 +163,33 @@ function searchPoems() {
       </div>
     </section>
 
+
+
     <div class="main-layout">
+
+      <div class="left-column">
+      <section class="poets-section">
+        <div class="section-header">
+          <h2 class="section-title">诗人</h2>
+          <a class="more-link" href="javascript:void(0)">更多</a>
+        </div>
+        <div class="poets-grid">
+          <div v-for="poet in poets" :key="poet.id" class="poet-card">
+            <div
+              class="poet-avatar"
+              :style="{
+                backgroundImage: poet.photo ? 'url(' + poet.photo + ')' : '',
+              }"
+              aria-label="poet avatar"
+            ></div>
+            <div class="poet-name">{{ poet.name }}</div>
+          </div>
+        </div>
+      </section>
       <section class="poems-section">
         <div class="section-header">
           <h2 class="section-title">经典诗词</h2>
-          <span class="poem-count">共 {{ poems.length }} 首</span>
+          <button class="refresh-btn" @click="refreshPoems">换一批</button>
         </div>
         <div class="grid">
           <article
@@ -178,6 +220,8 @@ function searchPoems() {
         </div>
       </section>
 
+      </div>
+
       <aside class="filter-sidebar">
         <div class="filter-card">
           <h3 class="filter-title">分类筛选</h3>
@@ -189,33 +233,47 @@ function searchPoems() {
             <div class="tags-container">
               <span class="category-tag">抒情</span>
               <span class="category-tag">写景</span>
-              <span class="category-tag">写人山水</span>
+              <span class="category-tag">写人</span>
+              <span class="category-tag">山水</span>
               <span class="category-tag">咏物</span>
-              <span class="category-tag">婉约春天</span>
+              <span class="category-tag">婉约</span>
+              <span class="category-tag">春天</span>
               <span class="category-tag">送别</span>
-              <span class="category-tag">秋天离别</span>
+              <span class="category-tag">秋天</span>
+              <span class="category-tag">离别</span>
               <span class="category-tag">爱情</span>
-              <span class="category-tag">思乡爱国</span>
+              <span class="category-tag">思乡</span>
+              <span class="category-tag">爱国</span>
               <span class="category-tag">怀古</span>
-              <span class="category-tag">哲理节日</span>
+              <span class="category-tag">哲理</span>
+              <span class="category-tag">节日</span>
               <span class="category-tag">友情</span>
-              <span class="category-tag">边塞闺怨</span>
+              <span class="category-tag">边塞</span>
+              <span class="category-tag">闺怨</span>
               <span class="category-tag">战争</span>
-              <span class="category-tag">梅花豪放</span>
+              <span class="category-tag">梅花</span>
+              <span class="category-tag">豪放</span>
               <span class="category-tag">田园</span>
-              <span class="category-tag">月亮夏天</span>
+              <span class="category-tag">月亮</span>
+              <span class="category-tag">夏天</span>
               <span class="category-tag">雪</span>
-              <span class="category-tag">励志冬天</span>
+              <span class="category-tag">励志</span>
+              <span class="category-tag">冬天</span>
               <span class="category-tag">重阳</span>
-              <span class="category-tag">悼亡中秋</span>
+              <span class="category-tag">悼亡</span>
+              <span class="category-tag">中秋</span>
               <span class="category-tag">七夕</span>
-              <span class="category-tag">荷花元宵节</span>
+              <span class="category-tag">荷花</span>
+              <span class="category-tag">元宵节</span>
               <span class="category-tag">寒食节</span>
-              <span class="category-tag">地名清明节</span>
+              <span class="category-tag">地名</span>
+              <span class="category-tag">清明节</span>
               <span class="category-tag">春节</span>
-              <span class="category-tag">菊花端午节</span>
+              <span class="category-tag">菊花</span>
+              <span class="category-tag">端午节</span>
               <span class="category-tag">黄河</span>
               <span class="category-tag">惜时</span>
+              <span class="category-tag">更多>></span>
             </div>
           </div>
 
@@ -237,6 +295,7 @@ function searchPoems() {
               <span class="category-tag">辛弃疾</span>
               <span class="category-tag">陆游</span>
               <span class="category-tag">王安石</span>
+              <span class="category-tag">更多>></span>
             </div>
           </div>
 
@@ -253,6 +312,7 @@ function searchPoems() {
               <span class="category-tag">元朝</span>
               <span class="category-tag">明朝</span>
               <span class="category-tag">清朝</span>
+              <span class="category-tag">更多>></span>
             </div>
           </div>
 
@@ -271,22 +331,22 @@ function searchPoems() {
           </h2>
 
           <section class="panel-section">
-            <h4 class="section-title">原文</h4>
+            <h4 class="panel-section-title">原文</h4>
             <p v-for="(line, i) in activePoem.content" :key="i" class="line">{{ line }}</p>
           </section>
 
           <section class="panel-section">
-            <h4 class="section-title">翻译</h4>
+            <h4 class="panel-section-title">翻译</h4>
             <p class="para">{{ activePoem.translation }}</p>
           </section>
 
           <section class="panel-section">
-            <h4 class="section-title">鉴赏</h4>
+            <h4 class="panel-section-title">鉴赏</h4>
             <p class="para">{{ activePoem.appreciation }}</p>
           </section>
 
           <section class="panel-section">
-            <h4 class="section-title">注释</h4>
+            <h4 class="panel-section-title">注释</h4>
             <p class="para note">{{ activePoem.notes }}</p>
           </section>
         </div>
@@ -314,7 +374,10 @@ function searchPoems() {
   margin: 0;
   padding: 24px 20px 56px;
   color: var(--text);
-  background: #ffffff;
+  background-image: url('../assets/photo1.png');
+  background-repeat: repeat;
+  background-position: center;
+  background-size: auto;
 }
 
 .hero {
@@ -336,7 +399,11 @@ function searchPoems() {
 }
 
 .search-background {
-  background: #d7d7d7;
+  background-color: #d7d7d7;
+  background-image: url('../assets/photo1.png');
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   padding: 60px 20px;
   margin: -30px -20px 30px -20px;
   display: flex;
@@ -351,10 +418,15 @@ function searchPoems() {
 }
 
 .main-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
+  display: flex;
   gap: 24px;
-  align-items: start;
+  align-items: flex-start;
+}
+
+.left-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .poems-section {
@@ -382,16 +454,23 @@ function searchPoems() {
   margin: 0;
 }
 
-.poem-count {
+.refresh-btn {
   font-size: 14px;
-  color: #666;
+  color: #333;
   background: #f5f5f5;
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: 6px 16px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.refresh-btn:hover {
+  background: #e0e0e0;
 }
 
 .filter-sidebar {
-  grid-column: 2;
+  flex: 0 0 300px;
+  width: 300px;
 }
 
 .filter-card {
@@ -402,6 +481,7 @@ function searchPoems() {
   border: 1px solid #e5e7eb;
   position: sticky;
   top: 20px;
+  height: 100%;
 }
 
 .filter-title {
@@ -694,11 +774,71 @@ function searchPoems() {
   margin-left: 8px;
 }
 .panel-section { margin: 12px 0; }
-.section-title {
+.panel-section-title {
   font-size: 14px;
   color: var(--accent);
   margin: 6px 0;
 }
 .para { line-height: 1.8; }
 .note { color: #9333ea; }
+.poets-section {
+  grid-column: 1;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
+  margin-bottom: 12px;
+}
+
+.poets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .poets-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 960px) {
+  .poets-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+.poet-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+}
+
+.poet-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid #e5e7eb;
+}
+
+.poet-name {
+  font-size: 14px;
+  color: #000;
+  text-align: center;
+}
+
+.more-link {
+  font-size: 14px;
+  color: #666;
+  background: #f5f5f5;
+  padding: 4px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+.more-link:hover {
+  background: #e9e9e9;
+  color: #333;
+}
+
 </style>
