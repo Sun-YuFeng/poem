@@ -3,8 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const username = ref('')
-const password = ref('')
+const username = ref('admin')
+const password = ref('-479308479')
 const loading = ref(false)
 const message = ref('')
 
@@ -68,6 +68,9 @@ function login() {
         username: ok.username,
         loginTime: new Date().toISOString()
       }))
+      import('../utils/eventBus').then(module => {
+        module.default.emit('login-status-changed')
+      })
       router.push('/home')
     } else {
       message.value = '用户名或密码错误'
@@ -93,67 +96,177 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="auth-page">
-    <div class="card">
-      <h2 class="title">登录</h2>
-      <div class="form" @keyup.enter="handleKeyPress">
-        <label class="label">用户名</label>
-        <input v-model="username" class="input" placeholder="请输入用户名" />
-        <label class="label">密码</label>
-        <input v-model="password" class="input" type="password" placeholder="请输入密码" @keyup.enter="handleKeyPress" />
-        <button class="btn primary" :disabled="loading" @click="login">
+  <div class="auth-container">
+    <div class="auth-illustration">
+      <img src="@/assets/photo3.png" alt="登录插图" class="illustration-img">
+    </div>
+    <div class="auth-form">
+      <div class="form-card">
+        <h2 class="form-title">欢迎回来</h2>
+        <p class="form-subtitle">请登录您的账号</p>
+        
+        <div class="form-group">
+          <label class="form-label">用户名</label>
+          <input v-model="username" class="form-input" placeholder="请输入用户名">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">密码</label>
+          <input v-model="password" class="form-input" type="password" placeholder="请输入密码">
+        </div>
+
+        <button class="submit-btn" :disabled="loading" @click="login">
           {{ loading ? '登录中...' : '登录' }}
         </button>
-        <button class="btn ghost" @click="toRegister">没有账号？去注册</button>
-        <p v-if="message" class="msg">{{ message }}</p>
+
+        <div class="form-footer">
+          <span>没有账号？</span>
+          <a class="register-link" @click="toRegister">立即注册</a>
+        </div>
+
+        <div class="agreement">
+          <input type="checkbox" id="login-agreement" checked>
+          <label for="login-agreement">我已阅读并同意<a href="#">用户协议</a>和<a href="#">隐私政策</a></label>
+        </div>
+
+        <p v-if="message" class="error-message">{{ message }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.auth-page {
-  height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #f5f7fb;
-  padding: 24px;
+.auth-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.auth-illustration {
+  flex: 1;
+  background: #f8fafc;
+  display: flex;
   overflow: hidden;
 }
-.card {
+
+.illustration-img {
   width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
-  padding: 24px;
+  height: 100%;
+  object-fit: cover;
+  min-width: 100%;
+  min-height: 100%;
 }
-.title {
-  margin: 0 0 16px 0;
-  font-size: 22px;
-  text-align: center;
-  color: #111827;
+
+.auth-form {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: white;
 }
-.form { display: flex; flex-direction: column; gap: 10px; }
-.label { font-size: 13px; color: #374151; }
-.input {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 10px 12px;
+
+.form-card {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+  color: #64748b;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #475569;
+  font-size: 0.875rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
   outline: none;
-  transition: border-color 0.2s ease;
+  border-color: #4e6ef2;
+  box-shadow: 0 0 0 3px rgba(78, 110, 242, 0.1);
 }
-.input:focus { border-color: #4e6ef2; box-shadow: 0 0 0 3px rgba(78,110,242,0.15); }
-.btn {
-  border-radius: 8px;
-  padding: 10px 14px;
-  cursor: pointer;
+
+.submit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #4e6ef2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
   font-weight: 500;
-  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
-.btn.primary { background: #4e6ef2; color: #fff; }
-.btn.primary:disabled { opacity: 0.7; cursor: not-allowed; }
-.btn.ghost { background: #fff; border-color: #e5e7eb; color: #111827; }
-.msg { color: #ef4444; font-size: 13px; text-align: center; }
+
+.submit-btn:hover {
+  background-color: #3b5bdb;
+}
+
+.submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.form-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.register-link {
+  color: #4e6ef2;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.register-link:hover {
+  text-decoration: underline;
+}
+
+.agreement {
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.agreement a {
+  color: #4e6ef2;
+  text-decoration: none;
+}
+
+.agreement a:hover {
+  text-decoration: underline;
+}
+
+.error-message {
+  margin-top: 1rem;
+  color: #ef4444;
+  font-size: 0.875rem;
+  text-align: center;
+}
 </style>

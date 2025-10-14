@@ -395,7 +395,7 @@ function refreshPoems() {
 }
 
 .search-section {
-  margin: 0px 0 24px;
+  margin: 80px 0 24px;
 }
 
 .search-background {
