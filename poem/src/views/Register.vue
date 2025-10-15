@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import userService from '../services/userService.js'
 
 const router = useRouter()
 const username = ref('')
@@ -10,31 +11,7 @@ const loading = ref(false)
 const message = ref('')
 const agreementChecked = ref(false)
 
-// 简单的哈希函数（与登录组件保持一致）
-function simpleHash(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32bit integer
-  }
-  return hash.toString()
-}
-
-function getUsers() {
-  try {
-    const raw = localStorage.getItem('users')
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function saveUsers(users) {
-  localStorage.setItem('users', JSON.stringify(users))
-}
-
-function register() {
+async function register() {
   message.value = ''
   if (!username.value || !password.value || !confirm.value) {
     message.value = '请填写完整信息'
@@ -48,24 +25,22 @@ function register() {
     message.value = '两次输入的密码不一致'
     return
   }
+  
   loading.value = true
-  setTimeout(() => {
-    const users = getUsers()
-    if (users.some(u => u.username === username.value)) {
-      message.value = '该用户名已存在'
-      loading.value = false
-      return
+  try {
+    const result = await userService.register(username.value, password.value)
+    if (result.success) {
+      message.value = '注册成功，正在跳转登录...'
+      setTimeout(() => router.push('/'), 600)
+    } else {
+      message.value = result.message
     }
-    // 存储哈希后的密码
-    users.push({ 
-      username: username.value, 
-      password: simpleHash(password.value) 
-    })
-    saveUsers(users)
-    message.value = '注册成功，正在跳转登录...'
-    setTimeout(() => router.push('/'), 600)
+  } catch (error) {
+    message.value = '注册失败，请稍后重试'
+    console.error('Register error:', error)
+  } finally {
     loading.value = false
-  }, 400)
+  }
 }
 
 // 处理键盘事件

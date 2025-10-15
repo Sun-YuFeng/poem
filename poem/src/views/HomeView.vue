@@ -1,92 +1,28 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { 
+  getAllPoems as getPoems, 
+  getAllTags as getTags, 
+  getAllDynasties as getDynasties, 
+  getAllAuthors as getAuthors 
+} from '../services/poemService.js'
 
-const poems = ref([
-  {
-    id: 1,
-    title: '静夜思',
-    author: '李白',
-    dynasty: '唐',
-    theme: '思乡',
-    content: ['床前明月光，', '疑是地上霜。', '举头望明月，', '低头思故乡。'],
-    tags: ['写景', '抒情', '名篇'],
-    translation: '明亮的月光洒在床前，仿佛像地上的霜。抬头望明月，低头思故乡。',
-    appreciation: '以小景寄大情，语言浅易而意蕴深长，结构对称，意境清远。',
-    notes: '“举头”“低头”动作对比，将外景与内心交织。'
-  },
-  {
-    id: 2,
-    title: '春晓',
-    author: '孟浩然',
-    dynasty: '唐',
-    theme: '春景',
-    content: ['春眠不觉晓，', '处处闻啼鸟。', '夜来风雨声，', '花落知多少。'],
-    tags: ['写景', '自然', '清新'],
-    translation: '春眠香甜不觉破晓，处处鸟鸣。念昨夜风雨，不知花落几许。',
-    appreciation: '清新含蓄，以听觉与回忆营造春晨与惜春之感。',
-    notes: '结尾设问含蓄隽永，反写惜春。'
-  },
-  {
-    id: 3,
-    title: '登鹳雀楼',
-    author: '王之涣',
-    dynasty: '唐',
-    theme: '登临',
-    content: ['白日依山尽，', '黄河入海流。', '欲穷千里目，', '更上一层楼。'],
-    tags: ['立意', '豪放', '哲思'],
-    translation: '夕阳依山沉落，黄河奔流入海。欲尽览千里风光，更登一层楼。',
-    appreciation: '由景入理，寓意进取与格局，言浅意深，格律整齐。',
-    notes: '“更上一层楼”常引申为不断提升眼界与境界。'
-  },
-  {
-    id: 4,
-    title: '望庐山瀑布',
-    author: '李白',
-    dynasty: '唐',
-    theme: '山水',
-    content: ['日照香炉生紫烟，', '遥看瀑布挂前川。', '飞流直下三千尺，', '疑是银河落九天。'],
-    tags: ['写景', '夸张', '壮丽'],
-    translation: '阳光照在香炉峰上生起紫色烟雾，远看瀑布像白绢挂在山前。飞流直下三千尺，让人怀疑是银河从九天落下。',
-    appreciation: '想象奇特，比喻夸张，展现李白浪漫主义风格，气势磅礴。',
-    notes: '运用夸张手法，将瀑布比作银河，极具视觉冲击力。'
-  },
-  {
-    id: 5,
-    title: '江雪',
-    author: '柳宗元',
-    dynasty: '唐',
-    theme: '冬景',
-    content: ['千山鸟飞绝，', '万径人踪灭。', '孤舟蓑笠翁，', '独钓寒江雪。'],
-    tags: ['写景', '孤寂', '意境'],
-    translation: '千山万岭不见飞鸟，万千道路不见人影。孤舟上披蓑戴笠的老翁，独自在寒江雪中垂钓。',
-    appreciation: '以极简笔墨勾勒出空灵寂静的冬景，意境深远，寄托诗人孤高情怀。',
-    notes: '前两句写大景之空寂，后两句写小景之孤傲，对比鲜明。'
-  },
-  {
-    id: 6,
-    title: '相思',
-    author: '王维',
-    dynasty: '唐',
-    theme: '爱情',
-    content: ['红豆生南国，', '春来发几枝。', '愿君多采撷，', '此物最相思。'],
-    tags: ['抒情', '婉约', '含蓄'],
-    translation: '红豆生长在南方，春天来了又发几枝。希望你多采摘一些，因为此物最能寄托相思。',
-    appreciation: '借物抒情，语言朴素而情感真挚，以红豆象征相思，含蓄隽永。',
-    notes: '红豆自古被视为相思之物，诗人借物抒情，委婉动人。'
-  }
-])
+const poems = ref([])
+const allTags = ref([])
+const allDynasties = ref([])
+const allAuthors = ref([])
+const loading = ref(true)
 
 const query = ref('')
-const dynasty = ref('全部')
-const theme = ref('全部')
-const author = ref('全部')
+const selectedDynasty = ref('全部')
+const selectedTag = ref('全部')
+const selectedAuthor = ref('全部')
 
 const activePoem = ref(null)
 const showDetail = ref(false)
 
-const dynasties = computed(() => ['全部', ...new Set(poems.value.map(p => p.dynasty))])
-const themes = computed(() => ['全部', ...new Set(poems.value.map(p => p.theme))])
-const authors = computed(() => ['全部', ...new Set(poems.value.map(p => p.author))])
+const dynasties = computed(() => ['全部', ...allDynasties.value])
+const authors = computed(() => ['全部', ...allAuthors.value])
 
 const poets = ref([
   { id: 1, name: '李白', photo: new URL('../assets/photo1.png', import.meta.url).href },
@@ -110,12 +46,12 @@ const filteredPoems = computed(() => {
       !q ||
       p.title.includes(q) ||
       p.author.includes(q) ||
-      p.content.join('').includes(q) ||
+      p.content.includes(q) ||
       p.tags.some(t => t.includes(q))
-    const matchDynasty = dynasty.value === '全部' || p.dynasty === dynasty.value
-    const matchTheme = theme.value === '全部' || p.theme === theme.value
-    const matchAuthor = author.value === '全部' || p.author === author.value
-    return matchQ && matchDynasty && matchTheme && matchAuthor
+    const matchDynasty = selectedDynasty.value === '全部' || p.dynasty === selectedDynasty.value
+    const matchTag = selectedTag.value === '全部' || p.tags.includes(selectedTag.value)
+    const matchAuthor = selectedAuthor.value === '全部' || p.author === selectedAuthor.value
+    return matchQ && matchDynasty && matchTag && matchAuthor
   })
 })
 
@@ -128,19 +64,54 @@ function closeDetail() {
 }
 function clearFilters() {
   query.value = ''
-  dynasty.value = '全部'
-  theme.value = '全部'
-  author.value = '全部'
+  selectedDynasty.value = '全部'
+  selectedTag.value = '全部'
+  selectedAuthor.value = '全部'
 }
 function searchPoems() {
-  // 搜索功能已经通过v-model自动实现，这里可以添加搜索动画或其他逻辑
   console.log('搜索关键词:', query.value)
 }
 
 function refreshPoems() {
-  // 随机打乱诗词顺序实现换一批功能
   poems.value = [...poems.value].sort(() => Math.random() - 0.5)
 }
+
+function selectTag(tag) {
+  selectedTag.value = tag
+}
+
+function selectAuthor(author) {
+  selectedAuthor.value = author
+}
+
+function selectDynasty(dynasty) {
+  selectedDynasty.value = dynasty
+}
+
+async function loadData() {
+  try {
+    loading.value = true
+    const [poemsData, tagsData, dynastiesData, authorsData] = await Promise.all([
+      getPoems(),
+      getTags(),
+      getDynasties(),
+      getAuthors()
+    ])
+    
+    poems.value = poemsData
+    allTags.value = tagsData
+    allDynasties.value = dynastiesData
+    allAuthors.value = authorsData
+  } catch (error) {
+    console.error('加载数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <template>
@@ -192,7 +163,11 @@ function refreshPoems() {
           <button class="refresh-btn" @click="refreshPoems">换一批</button>
         </div>
         <div class="grid">
+          <div v-if="loading" class="loading">
+            正在加载诗词数据...
+          </div>
           <article
+            v-else
             v-for="p in filteredPoems"
             :key="p.id"
             class="card"
@@ -203,18 +178,17 @@ function refreshPoems() {
               <div class="meta">
                 <span class="pill">{{ p.author }}</span>
                 <span class="pill">{{ p.dynasty }}</span>
-                <span class="pill theme">{{ p.theme }}</span>
               </div>
             </header>
             <div class="content">
-              <p v-for="(line, i) in p.content" :key="i" class="line">{{ line }}</p>
+              <p class="line">{{ p.content }}</p>
             </div>
             <footer class="tags">
               <span v-for="(t,i) in p.tags" :key="i" class="tag">#{{ t }}</span>
             </footer>
           </article>
 
-          <div v-if="filteredPoems.length === 0" class="empty">
+          <div v-if="!loading && filteredPoems.length === 0" class="empty">
             暂无匹配的诗作，试试调整筛选或关键词。
           </div>
         </div>
@@ -231,88 +205,47 @@ function refreshPoems() {
           <div class="category-tags">
             <h4 class="category-title">类型</h4>
             <div class="tags-container">
-              <span class="category-tag">抒情</span>
-              <span class="category-tag">写景</span>
-              <span class="category-tag">写人</span>
-              <span class="category-tag">山水</span>
-              <span class="category-tag">咏物</span>
-              <span class="category-tag">婉约</span>
-              <span class="category-tag">春天</span>
-              <span class="category-tag">送别</span>
-              <span class="category-tag">秋天</span>
-              <span class="category-tag">离别</span>
-              <span class="category-tag">爱情</span>
-              <span class="category-tag">思乡</span>
-              <span class="category-tag">爱国</span>
-              <span class="category-tag">怀古</span>
-              <span class="category-tag">哲理</span>
-              <span class="category-tag">节日</span>
-              <span class="category-tag">友情</span>
-              <span class="category-tag">边塞</span>
-              <span class="category-tag">闺怨</span>
-              <span class="category-tag">战争</span>
-              <span class="category-tag">梅花</span>
-              <span class="category-tag">豪放</span>
-              <span class="category-tag">田园</span>
-              <span class="category-tag">月亮</span>
-              <span class="category-tag">夏天</span>
-              <span class="category-tag">雪</span>
-              <span class="category-tag">励志</span>
-              <span class="category-tag">冬天</span>
-              <span class="category-tag">重阳</span>
-              <span class="category-tag">悼亡</span>
-              <span class="category-tag">中秋</span>
-              <span class="category-tag">七夕</span>
-              <span class="category-tag">荷花</span>
-              <span class="category-tag">元宵节</span>
-              <span class="category-tag">寒食节</span>
-              <span class="category-tag">地名</span>
-              <span class="category-tag">清明节</span>
-              <span class="category-tag">春节</span>
-              <span class="category-tag">菊花</span>
-              <span class="category-tag">端午节</span>
-              <span class="category-tag">黄河</span>
-              <span class="category-tag">惜时</span>
-              <span class="category-tag">更多>></span>
+              <span 
+                v-for="tag in allTags.slice(0, 20)" 
+                :key="tag"
+                class="category-tag"
+                :class="{ active: selectedTag === tag }"
+                @click="selectTag(tag)"
+              >
+                {{ tag }}
+              </span>
+              <span class="category-tag more" v-if="allTags.length > 20">更多>></span>
             </div>
           </div>
 
           <div class="category-tags">
             <h4 class="category-title">诗人</h4>
             <div class="tags-container">
-              <span class="category-tag">李白</span>
-              <span class="category-tag">杜甫</span>
-              <span class="category-tag">王维</span>
-              <span class="category-tag">孟浩然</span>
-              <span class="category-tag">白居易</span>
-              <span class="category-tag">李商隐</span>
-              <span class="category-tag">杜牧</span>
-              <span class="category-tag">王之涣</span>
-              <span class="category-tag">柳宗元</span>
-              <span class="category-tag">韩愈</span>
-              <span class="category-tag">苏轼</span>
-              <span class="category-tag">李清照</span>
-              <span class="category-tag">辛弃疾</span>
-              <span class="category-tag">陆游</span>
-              <span class="category-tag">王安石</span>
-              <span class="category-tag">更多>></span>
+              <span 
+                v-for="author in allAuthors.slice(0, 15)" 
+                :key="author"
+                class="category-tag"
+                :class="{ active: selectedAuthor === author }"
+                @click="selectAuthor(author)"
+              >
+                {{ author }}
+              </span>
+              <span class="category-tag more" v-if="allAuthors.length > 15">更多>></span>
             </div>
           </div>
 
           <div class="category-tags">
             <h4 class="category-title">朝代</h4>
             <div class="tags-container">
-              <span class="category-tag">先秦</span>
-              <span class="category-tag">汉朝</span>
-              <span class="category-tag">魏晋</span>
-              <span class="category-tag">南北朝</span>
-              <span class="category-tag">隋朝</span>
-              <span class="category-tag">唐朝</span>
-              <span class="category-tag">宋朝</span>
-              <span class="category-tag">元朝</span>
-              <span class="category-tag">明朝</span>
-              <span class="category-tag">清朝</span>
-              <span class="category-tag">更多>></span>
+              <span 
+                v-for="dynasty in allDynasties" 
+                :key="dynasty"
+                class="category-tag"
+                :class="{ active: selectedDynasty === dynasty }"
+                @click="selectDynasty(dynasty)"
+              >
+                {{ dynasty }}
+              </span>
             </div>
           </div>
 
@@ -332,7 +265,7 @@ function refreshPoems() {
 
           <section class="panel-section">
             <h4 class="panel-section-title">原文</h4>
-            <p v-for="(line, i) in activePoem.content" :key="i" class="line">{{ line }}</p>
+            <p class="line">{{ activePoem.content }}</p>
           </section>
 
           <section class="panel-section">
@@ -523,6 +456,20 @@ function refreshPoems() {
 .category-tag:hover {
   background: #e2e8f0;
   border-color: #cbd5e1;
+}
+
+.category-tag.active {
+  background: #4e6ef2;
+  color: white;
+  border-color: #4e6ef2;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-size: 16px;
+  grid-column: 1 / -1;
 }
 
 .reset-btn {

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import userService from '../services/userService.js'
 
 const router = useRouter()
 const username = ref('admin')
@@ -8,64 +9,20 @@ const password = ref('-479308479')
 const loading = ref(false)
 const message = ref('')
 
-// 简单的哈希函数（生产环境应使用更安全的哈希算法）
-function simpleHash(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32bit integer
-  }
-  return hash.toString()
-}
-
-// 初始化用户数据：若本地无 users，则从 public/users.json 读取作为种子
-async function initUsers() {
-  const key = 'users'
-  const exist = localStorage.getItem(key)
-  if (exist) return
-  try {
-    // 修复反引号转义问题，去掉多余的反斜杠
-    const resp = await fetch('/users.json')
-    if (!resp.ok) throw new Error('种子数据加载失败')
-    const data = await resp.json()
-    // 对种子数据中的密码进行哈希处理
-    const hashedUsers = data.map(user => ({
-      ...user,
-      password: simpleHash(user.password)
-    }))
-    localStorage.setItem(key, JSON.stringify(hashedUsers))
-  } catch (e) {
-    console.error(e)
-    // 若加载失败，至少写入一个空数组
-    localStorage.setItem(key, JSON.stringify([]))
-  }
-}
-
-function getUsers() {
-  try {
-    const raw = localStorage.getItem('users')
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
-}
-
-function login() {
+async function login() {
   message.value = ''
   if (!username.value || !password.value) {
     message.value = '请输入用户名和密码'
     return
   }
+  
   loading.value = true
-  setTimeout(() => {
-    const users = getUsers()
-    const hashedPassword = simpleHash(password.value)
-    const ok = users.find(u => u.username === username.value && u.password === hashedPassword)
-    if (ok) {
+  try {
+    const result = await userService.login(username.value, password.value)
+    if (result.success) {
       // 设置登录状态
       localStorage.setItem('currentUser', JSON.stringify({ 
-        username: ok.username,
+        username: result.user.username,
         loginTime: new Date().toISOString()
       }))
       import('../utils/eventBus').then(module => {
@@ -73,10 +30,14 @@ function login() {
       })
       router.push('/home')
     } else {
-      message.value = '用户名或密码错误'
+      message.value = result.message
     }
+  } catch (error) {
+    message.value = '登录失败，请稍后重试'
+    console.error('Login error:', error)
+  } finally {
     loading.value = false
-  }, 400)
+  }
 }
 
 function toRegister() {
@@ -91,7 +52,7 @@ function handleKeyPress(event) {
 }
 
 onMounted(() => {
-  initUsers()
+  // 不再需要初始化本地用户数据
 })
 </script>
 
