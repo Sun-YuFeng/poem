@@ -15,7 +15,7 @@ async function verifyImport() {
       return;
     }
     
-    console.log(`✅ 诗词总数: ${countData.length || 0} 首\n`);
+    console.log(`✅ 诗词总数: ${countData ? countData.length : 0} 首\n`);
     
     // 2. 检查前5条记录
     console.log('2. 检查前5条记录...');

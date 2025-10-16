@@ -50,7 +50,27 @@ class UserService {
         throw new Error('注册失败: ' + error.message)
       }
 
-      return { success: true, user: data[0] }
+      // 创建用户信息记录
+      const user = data[0]
+      const { error: infoError } = await supabase
+        .from('user_info')
+        .insert([
+          {
+            user_id: user.id,
+            nickname: username,
+            gender: 'male',
+            email: '',
+            bio: '',
+            avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+          }
+        ])
+
+      if (infoError) {
+        console.error('创建用户信息失败:', infoError)
+        // 不抛出错误，因为用户注册已经成功
+      }
+
+      return { success: true, user: user }
     } catch (error) {
       return { success: false, message: error.message }
     }
@@ -99,6 +119,95 @@ class UserService {
       return { exists: !!data }
     } catch (error) {
       return { exists: false, error: error.message }
+    }
+  }
+
+  // 获取用户信息
+  async getUserInfo(userId) {
+    try {
+      console.log('getUserInfo - 开始查询用户信息，用户ID:', userId)
+      
+      const { data, error } = await supabase
+        .from('user_info')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      console.log('getUserInfo - 查询结果:', { data, error })
+
+      if (error) {
+        console.log('getUserInfo - 查询错误:', error)
+        if (error.code === 'PGRST116') {
+          // 用户信息不存在，创建默认记录
+          console.log('getUserInfo - 用户信息不存在，创建默认记录')
+          return await this.createDefaultUserInfo(userId)
+        }
+        throw new Error('获取用户信息失败: ' + error.message)
+      }
+
+      console.log('getUserInfo - 查询成功，返回数据:', data)
+      return { success: true, userInfo: data }
+    } catch (error) {
+      console.error('getUserInfo - 异常:', error)
+      return { success: false, message: error.message }
+    }
+  }
+
+  // 更新用户信息
+  async updateUserInfo(userId, userInfo) {
+    try {
+      const { data, error } = await supabase
+        .from('user_info')
+        .update({
+          ...userInfo,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+
+      if (error) {
+        throw new Error('更新用户信息失败: ' + error.message)
+      }
+
+      return { success: true, userInfo: data[0] }
+    } catch (error) {
+      return { success: false, message: error.message }
+    }
+  }
+
+  // 创建默认用户信息
+  async createDefaultUserInfo(userId) {
+    try {
+      let username = '诗词爱好者'
+      
+      // 从localStorage获取用户名
+      const userData = localStorage.getItem('currentUser')
+      if (userData) {
+        const localUser = JSON.parse(userData)
+        username = localUser.username || '诗词爱好者'
+      }
+
+      const { data, error } = await supabase
+        .from('user_info')
+        .insert([
+          {
+            user_id: userId,
+            nickname: username,
+            gender: 'male',
+            email: '',
+            bio: '',
+            avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+          }
+        ])
+        .select()
+
+      if (error) {
+        throw new Error('创建用户信息失败: ' + error.message)
+      }
+
+      return { success: true, userInfo: data[0] }
+    } catch (error) {
+      return { success: false, message: error.message }
     }
   }
 

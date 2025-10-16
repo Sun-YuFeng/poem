@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import userService from '../services/userService.js'
+import { supabase } from '../utils/supabase.js'
 
 const router = useRouter()
 const username = ref('admin')
@@ -23,8 +24,12 @@ async function login() {
       // 设置登录状态
       localStorage.setItem('currentUser', JSON.stringify({ 
         username: result.user.username,
+        userId: result.user.id, // 保存用户ID
         loginTime: new Date().toISOString()
       }))
+      
+      console.log('登录成功，用户ID:', result.user.id)
+      
       import('../utils/eventBus').then(module => {
         module.default.emit('login-status-changed')
       })

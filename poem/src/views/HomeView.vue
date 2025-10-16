@@ -6,6 +6,8 @@ import {
   getAllDynasties as getDynasties, 
   getAllAuthors as getAuthors 
 } from '../services/poemService.js'
+import { supabase } from '../utils/supabase.js'
+import favoriteService from '../services/favoriteService.js'
 
 const poems = ref([])
 const allTags = ref([])
@@ -20,24 +22,75 @@ const selectedAuthor = ref('全部')
 
 const activePoem = ref(null)
 const showDetail = ref(false)
+const showAllPoems = ref(false)
+const currentUserId = ref(null)
+const userFavorites = ref(new Set())
 
 const dynasties = computed(() => ['全部', ...allDynasties.value])
 const authors = computed(() => ['全部', ...allAuthors.value])
 
-const poets = ref([
-  { id: 1, name: '李白', photo: new URL('../assets/photo1.png', import.meta.url).href },
-  { id: 2, name: '杜甫', photo: null },
-  { id: 3, name: '王维', photo: null },
-  { id: 4, name: '白居易', photo: null },
-  { id: 5, name: '苏轼', photo: null },
-  { id: 6, name: '辛弃疾', photo: null },
-  { id: 7, name: '李清照', photo: null },
-  { id: 8, name: '陶渊明', photo: new URL('../assets/photo2.png', import.meta.url).href },
-  { id: 9, name: '王安石', photo: null },
-  { id: 10, name: '孟浩然', photo: null },
-  { id: 11, name: '柳宗元', photo: null },
-  { id: 12, name: '韩愈', photo: null }
-])
+const poets = computed(() => {
+  // 统计每个作者的诗词数量
+  const authorCounts = {}
+  poems.value.forEach(poem => {
+    authorCounts[poem.author] = (authorCounts[poem.author] || 0) + 1
+  })
+  
+  // 按诗词数量排序，取前12位
+  const topAuthors = Object.keys(authorCounts)
+    .sort((a, b) => authorCounts[b] - authorCounts[a])
+    .slice(0, 12)
+  
+  // 生成诗人列表
+  const topPoets = topAuthors.map((author, index) => ({
+    id: index + 1,
+    name: author,
+    photo: index === 0 ? new URL('../assets/photo1.png', import.meta.url).href : 
+           index === 7 ? new URL('../assets/photo2.png', import.meta.url).href : null
+  }))
+  
+  return topPoets
+})
+
+// 控制显示的诗词数量
+const displayedPoems = computed(() => {
+  return showAllPoems.value ? filteredPoems.value : filteredPoems.value.slice(0, 24)
+})
+
+// 收藏/取消收藏功能
+async function toggleFavorite(poem) {
+  if (!currentUserId.value) {
+    alert('请先登录后再收藏')
+    return
+  }
+
+  try {
+    const poemId = poem.id
+    
+    if (isFavorite(poemId)) {
+      // 取消收藏
+      const result = await favoriteService.removeFavorite(currentUserId.value, poemId)
+      if (result.success) {
+        userFavorites.value.delete(poemId)
+        console.log('取消收藏:', poem.title)
+      } else {
+        alert('取消收藏失败')
+      }
+    } else {
+      // 添加收藏
+      const result = await favoriteService.addFavorite(currentUserId.value, poemId)
+      if (result.success) {
+        userFavorites.value.add(poemId)
+        console.log('收藏成功:', poem.title)
+      } else {
+        alert('收藏失败')
+      }
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    alert('操作失败，请重试')
+  }
+}
 
 const filteredPoems = computed(() => {
   const q = query.value.trim()
@@ -88,9 +141,74 @@ function selectDynasty(dynasty) {
   selectedDynasty.value = dynasty
 }
 
+// 获取当前用户ID
+async function getCurrentUserId() {
+  try {
+    console.log('getCurrentUserId - 开始获取用户ID')
+    
+    // 检查localStorage中的用户信息
+    const userData = localStorage.getItem('currentUser')
+    if (!userData) {
+      console.log('getCurrentUserId - 用户未登录')
+      return null
+    }
+
+    const localUser = JSON.parse(userData)
+    console.log('getCurrentUserId - localStorage用户数据:', localUser)
+    
+    // 直接使用localStorage中的userId
+    if (localUser.userId) {
+      console.log('getCurrentUserId - 使用localStorage中的用户ID:', localUser.userId)
+      return localUser.userId
+    }
+    
+    // 如果没有userId，尝试从users表获取（兼容旧版本）
+    console.log('getCurrentUserId - 尝试从users表获取用户ID')
+    const { data: userDataFromDB, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', localUser.username)
+      .single()
+
+    if (error) {
+      console.log('getCurrentUserId - 获取用户ID失败:', error)
+      return null
+    }
+    
+    console.log('getCurrentUserId - 从users表获取的用户ID:', userDataFromDB.id)
+    return userDataFromDB.id
+  } catch (error) {
+    console.error('getCurrentUserId - 异常:', error)
+    return null
+  }
+}
+
+// 加载用户收藏
+async function loadUserFavorites() {
+  if (!currentUserId.value) return
+  
+  try {
+    const result = await favoriteService.getUserFavorites(currentUserId.value)
+    if (result.success) {
+      userFavorites.value = new Set(result.favorites)
+    }
+  } catch (error) {
+    console.error('加载用户收藏失败:', error)
+  }
+}
+
+// 检查诗词是否被收藏
+function isFavorite(poemId) {
+  return userFavorites.value.has(poemId)
+}
+
 async function loadData() {
   try {
     loading.value = true
+    
+    // 获取当前用户ID
+    currentUserId.value = await getCurrentUserId()
+    
     const [poemsData, tagsData, dynastiesData, authorsData] = await Promise.all([
       getPoems(),
       getTags(),
@@ -102,6 +220,11 @@ async function loadData() {
     allTags.value = tagsData
     allDynasties.value = dynastiesData
     allAuthors.value = authorsData
+    
+    // 加载用户收藏
+    if (currentUserId.value) {
+      await loadUserFavorites()
+    }
   } catch (error) {
     console.error('加载数据失败:', error)
   } finally {
@@ -111,6 +234,17 @@ async function loadData() {
 
 onMounted(() => {
   loadData()
+})
+
+// 监听认证状态变化
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    currentUserId.value = session.user.id
+    loadUserFavorites()
+  } else if (event === 'SIGNED_OUT') {
+    currentUserId.value = null
+    userFavorites.value = new Set()
+  }
 })
 </script>
 
@@ -168,7 +302,7 @@ onMounted(() => {
           </div>
           <article
             v-else
-            v-for="p in filteredPoems"
+            v-for="p in displayedPoems"
             :key="p.id"
             class="card"
             @click="openDetail(p)"
@@ -183,14 +317,28 @@ onMounted(() => {
             <div class="content">
               <p class="line">{{ p.content }}</p>
             </div>
-            <footer class="tags">
-              <span v-for="(t,i) in p.tags" :key="i" class="tag">#{{ t }}</span>
+            <footer class="card-footer">
+              <div class="tags">
+                <span v-for="(t,i) in p.tags" :key="i" class="tag">#{{ t }}</span>
+              </div>
+              <button class="favorite-btn" @click.stop="toggleFavorite(p)" :class="{ active: isFavorite(p.id) }">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </button>
             </footer>
           </article>
 
           <div v-if="!loading && filteredPoems.length === 0" class="empty">
             暂无匹配的诗作，试试调整筛选或关键词。
           </div>
+        </div>
+
+        <!-- 查看更多按钮 -->
+        <div v-if="!loading && filteredPoems.length > 24" class="more-poems-container">
+          <button class="more-poems-btn" @click="showAllPoems = !showAllPoems">
+            ————{{ showAllPoems ? '收起部分诗词' : '点此查看更多'}}————
+          </button>
         </div>
       </section>
 
@@ -222,7 +370,7 @@ onMounted(() => {
             <h4 class="category-title">诗人</h4>
             <div class="tags-container">
               <span 
-                v-for="author in allAuthors.slice(0, 15)" 
+                v-for="author in allAuthors" 
                 :key="author"
                 class="category-tag"
                 :class="{ active: selectedAuthor === author }"
@@ -230,7 +378,6 @@ onMounted(() => {
               >
                 {{ author }}
               </span>
-              <span class="category-tag more" v-if="allAuthors.length > 15">更多>></span>
             </div>
           </div>
 
@@ -307,10 +454,13 @@ onMounted(() => {
   margin: 0;
   padding: 24px 20px 56px;
   color: var(--text);
-  background-image: url('../assets/photo1.png');
-  background-repeat: repeat;
-  background-position: center;
-  background-size: auto;
+  background-color: rgb(242,235,230);
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%);
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .hero {
@@ -661,8 +811,42 @@ onMounted(() => {
   margin: 6px 0;
   color: #000000;
 }
-.tags {
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 8px;
+}
+
+.tags {
+  flex: 1;
+}
+
+.favorite-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-btn:hover {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  transform: scale(1.1);
+}
+
+.favorite-btn.active {
+  color: #ff6b6b;
+}
+
+.favorite-btn.active:hover {
+  color: #ff4757;
 }
 .tag {
   display: inline-block;
@@ -684,32 +868,46 @@ onMounted(() => {
 .overlay {
   position: fixed;
   inset: 0;
-  background: #ffffff;
+  background: rgba(0, 0, 0, 0.5);
   z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
 }
 .panel {
-  width: 100vw;
-  height: 100vh;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
   background: #ffffff;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   position: relative;
   overflow: auto;
 }
 .close {
   position: absolute;
-  top: 8px;
-  right: 10px;
+  top: 12px;
+  right: 16px;
   border: none;
   background: transparent;
-  font-size: 22px;
+  font-size: 24px;
   cursor: pointer;
-  color: var(--muted);
+  color: #999;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
-.close:hover { color: var(--text); }
+.close:hover { 
+  color: #333;
+  background: rgba(0, 0, 0, 0.1);
+}
 .panel-body {
-  padding: 18px 18px 22px;
+  padding: 24px;
 }
 .panel-title {
   margin: 0 0 8px 0;
@@ -786,6 +984,29 @@ onMounted(() => {
 .more-link:hover {
   background: #e9e9e9;
   color: #333;
+}
+
+/* 查看更多按钮样式 */
+.more-poems-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 16px 0;
+}
+
+.more-poems-btn {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: color 0.3s ease;
+  text-decoration: none;
+}
+
+.more-poems-btn:hover {
+  color: #4e6ef2;
 }
 
 </style>

@@ -106,7 +106,15 @@ export const getAllDynasties = async () => {
   
   // 提取所有朝代并去重
   const dynasties = data.map(poem => poem.dynasty)
-  return [...new Set(dynasties)].sort()
+  const uniqueDynasties = [...new Set(dynasties)]
+  
+  // 添加新的朝代选项
+  const additionalDynasties = ['先秦', '两汉', '魏晋', '隋', '金', '元', '明', '清']
+  
+  // 合并并去重，然后排序
+  const allDynasties = [...new Set([...uniqueDynasties, ...additionalDynasties])].sort()
+  
+  return allDynasties
 }
 
 // 获取所有作者
