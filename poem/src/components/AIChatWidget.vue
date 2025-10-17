@@ -2,7 +2,11 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const aiAvatar = new URL('../assets/mowanlingzhu.jpeg', import.meta.url).href
-const n8nWebhookUrl = '/api/n8n/webhook-test/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
+// 根据环境选择Webhook URL
+const isDevelopment = import.meta.env.DEV
+const n8nWebhookUrl = isDevelopment 
+  ? '/api/n8n/webhook-test/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
+  : '/.netlify/functions/n8n-proxy'
 
 const isOpen = ref(false)
 const position = ref({ x: 50, y: 50 })
@@ -114,8 +118,9 @@ const sendMessage = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        chatinput: message,
-        timestamp: new Date().toISOString()
+        chatInput: message,
+        timestamp: new Date().toISOString(),
+        sessionId: 'user-session-' + Date.now()
       })
     })
     
@@ -135,14 +140,34 @@ const sendMessage = async () => {
       return
     }
     
-    const data = await response.json()
-    console.log('n8n响应数据:', data)
+    // 检查响应内容
+    const responseText = await response.text()
+    console.log('=== n8n响应详细信息 ===')
+    console.log('响应状态:', response.status, response.statusText)
+    console.log('响应头:', Object.fromEntries(response.headers.entries()))
+    console.log('响应文本长度:', responseText.length)
+    console.log('响应文本内容:', responseText)
+    console.log('响应文本类型:', typeof responseText)
+    
+    let data = {}
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText)
+        console.log('n8n解析后的数据:', data)
+        console.log('数据字段:', Object.keys(data))
+      } catch (parseError) {
+        console.error('JSON解析错误:', parseError)
+        console.error('解析错误的文本:', responseText)
+        // 如果解析失败，使用响应文本作为回复
+        data = { response: responseText }
+      }
+    }
     
     // 添加AI回复
     messages.value.push({
       id: Date.now() + 1,
       type: 'ai',
-      content: data.response || data.message || data.answer || '收到您的消息，正在处理中...',
+      content: data.response || data.message || data.answer || responseText || '收到您的消息，正在处理中...',
       timestamp: new Date()
     })
     
