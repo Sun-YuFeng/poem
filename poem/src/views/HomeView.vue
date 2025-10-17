@@ -8,6 +8,7 @@ import {
 } from '../services/poemService.js'
 import { supabase } from '../utils/supabase.js'
 import favoriteService from '../services/favoriteService.js'
+import AIChatWidget from '../components/AIChatWidget.vue'
 
 const poems = ref([])
 const allTags = ref([])
@@ -432,6 +433,8 @@ supabase.auth.onAuthStateChange((event, session) => {
         </div>
       </div>
     </div>
+    <!-- AI聊天窗口组件 -->
+    <AIChatWidget />
   </main>
 </template>
 

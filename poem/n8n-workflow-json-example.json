@@ -1,0 +1,42 @@
+{
+  "n8n_workflow_example": {
+    "description": "诗歌赏析AI助手工作流配置示例",
+    "webhook_config": {
+      "node_type": "Webhook",
+      "path": "/webhook-test/3a13350f-d676-4512-9e27-2833d707f231"
+    },
+    "request_format": {
+      "message": "请赏析李白的《静夜思》",
+      "timestamp": "2024-01-01T10:00:00Z",
+      "sessionId": "user-session-123"
+    },
+    "response_format": {
+      "analysis": "《静夜思》是唐代诗人李白的代表作之一...",
+      "recommendations": [
+        "推荐阅读：李白的《月下独酌》",
+        "相关诗歌：杜甫的《月夜忆舍弟》"
+      ],
+      "timestamp": "2024-01-01T10:00:05Z"
+    },
+    "workflow_nodes": [
+      {
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "parameters": {
+          "path": "/webhook-test/3a13350f-d676-4512-9e27-2833d707f231",
+          "responseMode": "responseNode"
+        }
+      },
+      {
+        "name": "诗歌处理",
+        "type": "n8n-nodes-base.code",
+        "parameters": {
+          "jsCode": "const userMessage = $input.first().json.message;\nlet response = {};\n\nif (userMessage.includes('李白') || userMessage.includes('静夜思')) {\n  response = {\n    analysis: '《静夜思》赏析：\\\\n\\\\n床前明月光，疑是地上霜。\\\\n举头望明月，低头思故乡。\\\\n\\\\n📖 创作背景：此诗写于李白漫游时期，表达了对故乡的深切思念。\\\\n🎨 艺术特色：语言简洁，意境深远，通过明月意象抒发思乡之情。',\n    recommendations: ['推荐阅读：李白的《月下独酌》', '相关诗歌：杜甫的《月夜忆舍弟》']\n  };\n} else {\n  response = {\n    analysis: '您好！我是诗歌赏析AI助手。我可以帮您赏析诗歌作品，请告诉我您想了解哪首诗歌？',\n    recommendations: []\n  };\n}\n\nreturn response;"
+        }
+      }
+    ]
+  },
+  "integration_guide": {
+    "frontend_code": "async function sendToN8NWorkflow(message) {\n  try {\n    const response = await fetch('http://localhost:5678/webhook-test/3a13350f-d676-4512-9e27-2833d707f231', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        message: message,\n        timestamp: new Date().toISOString(),\n        sessionId: 'user-session-' + Date.now()\n      })\n    });\n    \n    if (!response.ok) throw new Error('网络请求失败');\n    return await response.json();\n  } catch (error) {\n    return {\n      analysis: '抱歉，AI服务暂时不可用，请稍后再试。',\n      recommendations: []\n    };\n  }\n}"
+  }
+}
