@@ -163,12 +163,18 @@ const sendMessage = async () => {
       }
     }
     
+    // 处理AI回复中的换行符
+    const aiResponse = data.response || data.message || data.answer || responseText || '收到您的消息，正在处理中...'
+    const formattedResponse = aiResponse.replace(/
+/g, '<br>')
+    
     // 添加AI回复
     messages.value.push({
       id: Date.now() + 1,
       type: 'ai',
-      content: data.response || data.message || data.answer || responseText || '收到您的消息，正在处理中...',
-      timestamp: new Date()
+      content: formattedResponse,
+      timestamp: new Date(),
+      isHtml: true  // 标记为HTML内容
     })
     
   } catch (error) {
@@ -255,9 +261,7 @@ const handleKeyPress = (e) => {
           :class="['message-bubble', msg.type === 'user' ? 'user-message' : 'ai-message']"
         >
           <div v-if="msg.type === 'ai'" class="message-avatar" :style="{ backgroundImage: 'url(' + aiAvatar + ')' }"></div>
-          <div class="message-content">
-            {{ msg.content }}
-          </div>
+          <div class="message-content" v-html="msg.content"></div>
           <div v-if="msg.type === 'user'" class="message-avatar user-avatar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
