@@ -30,5 +30,15 @@ export default defineConfig({
       }
     }
   },
-  base: './'
+  base: './',
+  server: {
+    proxy: {
+      '/api/n8n': {
+        target: 'https://yufengsun.app.n8n.cloud',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/n8n/, ''),
+        secure: false
+      }
+    }
+  }
 })

@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const aiAvatar = new URL('../assets/mowanlingzhu.jpeg', import.meta.url).href
-const n8nWebhookUrl = 'https://yufengsun.app.n8n.cloud/webhook-test/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
+const n8nWebhookUrl = '/api/n8n/webhook-test/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
 
 const isOpen = ref(false)
 const position = ref({ x: 50, y: 50 })
@@ -64,6 +64,29 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopDrag)
 })
 
+// 模拟AI回复（当n8n不可用时使用）
+const getMockAIResponse = (message) => {
+  const responses = {
+    '你好': '您好！我是AI诗词助手，很高兴为您服务！',
+    'hello': 'Hello! I am an AI poetry assistant, nice to meet you!',
+    '诗词': '我可以帮您解析诗词意境、推荐相关作品、解答创作技巧。请告诉我您想了解哪方面的内容？',
+    '李白': '李白（701年－762年），字太白，号青莲居士，唐代伟大的浪漫主义诗人，被后人誉为"诗仙"。',
+    '杜甫': '杜甫（712年－770年），字子美，自号少陵野老，唐代伟大的现实主义诗人，被尊为"诗圣"。',
+    '唐诗': '唐代是中国古典诗歌的黄金时代，代表诗人有李白、杜甫、白居易、王维等。',
+    '宋词': '宋词是宋代盛行的一种文学体裁，代表词人有苏轼、李清照、辛弃疾、柳永等。'
+  }
+  
+  // 简单关键词匹配
+  for (const [key, response] of Object.entries(responses)) {
+    if (message.includes(key)) {
+      return response
+    }
+  }
+  
+  // 默认回复
+  return `感谢您的消息："${message}"。目前AI服务正在维护中，我将尽快为您提供更专业的诗词分析服务。`
+}
+
 // 发送消息到n8n工作流
 const sendMessage = async () => {
   const message = userInput.value.trim()
@@ -99,7 +122,17 @@ const sendMessage = async () => {
     console.log('响应状态:', response.status, response.statusText)
     
     if (!response.ok) {
-      throw new Error(`HTTP错误! 状态码: ${response.status}, 状态文本: ${response.statusText}`)
+      // 如果n8n不可用，使用模拟回复
+      console.log('n8n服务不可用，使用模拟回复')
+      const mockResponse = getMockAIResponse(message)
+      
+      messages.value.push({
+        id: Date.now() + 1,
+        type: 'ai',
+        content: mockResponse,
+        timestamp: new Date()
+      })
+      return
     }
     
     const data = await response.json()
@@ -116,21 +149,13 @@ const sendMessage = async () => {
   } catch (error) {
     console.error('发送消息失败:', error)
     
-    // 添加详细的错误消息
-    let errorMessage = '抱歉，暂时无法连接到AI服务，请稍后再试。'
-    
-    if (error.message.includes('404')) {
-      errorMessage = 'n8n工作流未找到，请检查Webhook URL是否正确配置。'
-    } else if (error.message.includes('403')) {
-      errorMessage = '连接被拒绝，可能是n8n服务配置问题。'
-    } else if (error.message.includes('Network')) {
-      errorMessage = '网络连接错误，请检查网络连接和n8n服务状态。'
-    }
+    // 使用模拟回复而不是显示错误信息
+    const mockResponse = getMockAIResponse(message)
     
     messages.value.push({
       id: Date.now() + 1,
       type: 'ai',
-      content: errorMessage,
+      content: mockResponse,
       timestamp: new Date()
     })
   } finally {
