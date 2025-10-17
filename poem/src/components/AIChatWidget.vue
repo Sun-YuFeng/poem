@@ -165,8 +165,7 @@ const sendMessage = async () => {
     
     // 处理AI回复中的换行符
     const aiResponse = data.response || data.message || data.answer || responseText || '收到您的消息，正在处理中...'
-    const formattedResponse = aiResponse.replace(/
-/g, '<br>')
+    const formattedResponse = aiResponse.replace(/\n/g, '<br>')
     
     // 添加AI回复
     messages.value.push({
