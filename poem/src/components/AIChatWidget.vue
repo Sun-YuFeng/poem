@@ -6,7 +6,7 @@ const aiAvatar = new URL('../assets/mowanlingzhu.jpeg', import.meta.url).href
 const isDevelopment = import.meta.env.DEV
 const n8nWebhookUrl = isDevelopment 
   ? '/api/n8n/webhook-test/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
-  : '/.netlify/functions/n8n-proxy'
+  : 'https://yufengsun.app.n8n.cloud/webhook/943cda27-bfbc-46e9-a51a-f4e2260d88e1'
 
 const isOpen = ref(false)
 const position = ref({ x: 50, y: 50 })
